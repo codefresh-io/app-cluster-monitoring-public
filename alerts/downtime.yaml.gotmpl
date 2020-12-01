@@ -1,0 +1,175 @@
+- alert: NodeDown
+  expr: up{job="consul-nodes"} == 0
+  for: 10m
+  labels:
+    alertgroup: downtime
+    severity: warning
+  annotations:
+    message: |
+      {{`{{ $labels.node_role }}`}} {{`{{ $labels.node }}`}} (agent {{`{{ $labels.instance }}`}}) is down for 10m
+      Runtime Env = {{`{{ $labels.runtime_env }}`}}
+    summary: Docker node Agent is down
+
+- alert: RuntimeEnvDown
+  expr: (0 * up{job="consul-nodes"} + ON(node) GROUP_LEFT() consul_catalog_service_node_healthy{service_name="docker-node"}) == 0 unless ON(runtime_env, node_role) (0 * up{job="consul-nodes"} + ON(node) GROUP_LEFT() consul_catalog_service_node_healthy{service_name="docker-node"}) == 1
+  for: 3m
+  labels:
+    alertgroup: downtime
+    severity: critical
+  annotations:
+    message: '{{`{{ $labels.node_role }}`}} {{`{{ $labels.node }}`}} (agent {{`{{ $labels.instance }}`}}) is down: {{`{{ $value }}`}} '
+    summary: All nodes for runtime_env {{`{{ $labels.runtime_env }}`}} are down
+
+- alert: DockerNodeDown
+  expr: consul_catalog_service_node_healthy{service_name="docker-node"} + ON(node) GROUP_LEFT(instance, runtime_env) (up{job="consul-nodes"} * 0) == 0
+  for: 1m
+  labels:
+    alertgroup: nodedown
+    severity: warning
+  annotations:
+    message: Docker node {{`{{ $labels.node }}`}} of {{`{{ $labels.runtime_env }}`}} runtime environment is down
+    summary: '{{`{{ $labels.service_name }}`}} is down'
+
+- alert: DeploymentDown
+  expr: kube_deployment_status_replicas_unavailable > 0
+  for: 10m
+  labels:
+    alertgroup: downtime
+    severity: warning
+  annotations:
+    message: deployment {{`{{ $labels.deployment }}`}} has {{`{{ $value }}`}} replicas unavailable
+    summary: '{{`{{ $labels.deployment }}`}}: has inssuficient replicas.'
+
+- alert: Down_cfui
+  expr: absent(count(container_fs_limit_bytes{container="{{ .Values.container_prefix }}cfui",job="kubelet",namespace="{{ .Values.app_namespace }}"}) >= 1)
+  for: 3m
+  labels:
+    alertgroup: AppContainerIsDown
+    severity: critical
+  annotations:
+    message: 'cfui: there are less than 1 containers running'
+    summary: cfui is down
+
+- alert: Down_cfapi
+  expr: absent(count(container_fs_limit_bytes{container="{{ .Values.container_prefix }}{{ .Values.cfapi_name }}",job="kubelet",namespace="{{ .Values.app_namespace }}"}) >= {{ if eq .Environment.Name "prod" }}2{{ else }}1{{ end }})
+  for: 3m
+  labels:
+    alertgroup: AppContainerIsDown
+    severity: critical
+  annotations:
+    message: 'cfapi: there are less than 2 containers running'
+    summary: cfapi is down
+
+- alert: Down_cfapi_error_rate
+  expr: sum(rate(nginx_ingress_controller_requests{service="{{ .Values.container_prefix }}{{ .Values.cfapi_name }}",status=~"^(?:5..)$"}[3m])) / sum(rate(nginx_ingress_controller_requests{service="{{ .Values.container_prefix }}{{ .Values.cfapi_name }}"}[3m])) >= 0.1
+  for: 3m
+  labels:
+    alertgroup: AppContainerIsDown
+    severity: critical
+  annotations:
+    message: 'cfapi: error rate > 10%'
+    summary: cfapi error rate is more than 10% in the last 3 mins
+
+- alert: Down_que
+  expr: absent(count(container_fs_limit_bytes{container="{{ .Values.container_prefix }}nats",job="kubelet",namespace="{{ .Values.app_namespace }}"}) >= 1)
+  for: 3m
+  labels:
+    alertgroup: AppContainerIsDown
+    severity: critical
+  annotations:
+    message: 'nats que: there are less than 1 containers running'
+    summary: queue is down
+
+- alert: Down_cfTlsSign
+  expr: absent(count(container_fs_limit_bytes{container="{{ .Values.container_prefix }}cfsign",job="kubelet",namespace="{{ .Values.app_namespace }}"}) >= 1)
+  for: 3m
+  labels:
+    alertgroup: AppContainerIsDown
+    severity: critical
+  annotations:
+    message: 'cf-sign: no containers running'
+    summary: cf-sign is down
+
+{{- if not ( .Values.onprem ) }}
+- alert: Down_accountsReferrals
+  expr: absent(count(container_fs_limit_bytes{container="{{ .Values.container_prefix }}accounts-referrals",job="kubelet",namespace="{{ .Values.app_namespace }}"}) >= 1)
+  for: 3m
+  labels:
+    alertgroup: AppContainerIsDown
+    severity: critical
+  annotations:
+    message: 'accounts-referrals: no containers running'
+    summary: accounts-referrals is down
+{{- end }}
+
+- alert: Down_ingressController
+  expr: absent(count(container_fs_limit_bytes{container="{{ .Values.container_prefix }}ingress-controller",job="kubelet",namespace="{{ .Values.app_namespace }}"}) >= 1)
+  for: 3m
+  labels:
+    alertgroup: AppContainerIsDown
+    severity: critical
+  annotations:
+    message: 'ingress-controller: no containers running'
+    summary: ingress-controller is down
+
+- alert: Down_kubeIntegration
+  expr: absent(count(container_fs_limit_bytes{container="{{ .Values.container_prefix }}kube-integration",job="kubelet",namespace="{{ .Values.app_namespace }}"}) >= 1)
+  for: 3m
+  labels:
+    alertgroup: AppContainerIsDown
+    severity: critical
+  annotations:
+    message: 'kube-integration: no containers running'
+    summary: kube-integration is down
+
+{{- if not ( .Values.onprem ) }}
+- alert: Down_mailer
+  expr: absent(count(container_fs_limit_bytes{container="{{ .Values.container_prefix }}mailer",job="kubelet",namespace="{{ .Values.app_namespace }}"}) >= 1)
+  for: 3m
+  labels:
+    alertgroup: AppContainerIsDown
+    severity: critical
+  annotations:
+    message: 'mailer: no containers running'
+    summary: mailer is down
+
+- alert: Down_payments
+  expr: absent(count(container_fs_limit_bytes{container="{{ .Values.container_prefix }}payments",job="kubelet",namespace="{{ .Values.app_namespace }}"}) >= 1)
+  for: 3m
+  labels:
+    alertgroup: AppContainerIsDown
+    severity: critical
+  annotations:
+    message: 'payments: no containers running'
+    summary: payments is down
+
+- alert: Down_salesforceReporter
+  expr: absent(count(container_fs_limit_bytes{container="{{ .Values.container_prefix }}salesforce-reporter",job="kubelet",namespace="{{ .Values.app_namespace }}"}) >= 1)
+  for: 3m
+  labels:
+    alertgroup: AppContainerIsDown
+    severity: critical
+  annotations:
+    message: 'salesforce-reporter: no containers running'
+    summary: salesforce-reporter is down
+
+- alert: Down_clusterProviders
+  expr: absent(count(container_fs_limit_bytes{container="{{ .Values.container_prefix }}cluster-providers",job="kubelet",namespace="{{ .Values.app_namespace }}"}) >= 1)
+  for: 3m
+  labels:
+    alertgroup: AppContainerIsDown
+    severity: critical
+  annotations:
+    message: 'cluster-providers: no containers running'
+    summary: cluster-providers is down
+
+- alert: DynamicCompositionRoutingIsDown
+  expr: up{job="consul-nodes",node_role="runner",runtime_env=~"fxempire|roman-tweed"} unless ON(node) (count(container_start_time_seconds{container_label_com_docker_compose_project="dynamiccompositionrouting",job="consul-nodes"}) BY (node, runtime_env, node_role) == 3)
+  for: 5m
+  labels:
+    alertgroup: DynamicCompositionRouting
+    severity: warning
+  annotations:
+    message: '{{`{{ $labels.node_role }}`}} node {{`{{ $labels.node }}`}} Dynamic Composition Routing is down%   Runtime Env = {{`{{ $labels.runtime_env }}`}}'
+    summary: Dynamic Composition Routing is down
+{{- end }}

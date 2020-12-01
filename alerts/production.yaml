@@ -1,0 +1,22 @@
+- alert: CPUThrottlingHigh
+  annotations:
+    message: '{{ printf "%0.0f" $value }}% throttling of CPU in namespace {{ $labels.namespace }} for container {{ $labels.container }} in pod {{ $labels.pod }}.'
+    runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-cputhrottlinghigh
+  expr: |-
+    100 * sum(increase(container_cpu_cfs_throttled_periods_total{container!="", }[5m])) by (container, pod, namespace)
+      /
+    sum(increase(container_cpu_cfs_periods_total{}[5m])) by (container, pod, namespace)
+      > 25
+  for: 15m
+  labels:
+    severity: warning
+
+- alert: NatGatewayDown
+  expr: up{job="nat-gateway"} == 0
+  for: 1m
+  labels:
+    alertgroup: nodedown
+    severity: critical
+  annotations:
+    message: NAT gateway instance {{ $labels.instance }} is down
+    summary: 'NAT gateway {{ $labels.instance }} is down'

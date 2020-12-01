@@ -1,0 +1,33 @@
+- alert: NodeStorageExceededCritical
+  expr: container_fs_usage_bytes{id="/",job="kubelet"} / ON(instance, node, node_role, runtime_env, device) container_fs_limit_bytes{id="/",job="kubelet"} * 100 > 90
+  for: 2m
+  labels:
+    alertgroup: NodeStorageExceeded
+    severity: critical
+  annotations:
+    message: |
+      {{ $labels.node_role }} node {{ $labels.node }} disk usage more then 90%
+      Runtime Env = {{ $labels.runtime_env }}
+    summary: Node Storage Exceeded
+
+- alert: NodeStorageExceededWarning
+  expr: container_fs_usage_bytes{id="/",job="kubelet"} / ON(instance, node, node_role, runtime_env, device) container_fs_limit_bytes{id="/",job="kubelet"} * 100 > 80
+  for: 15m
+  labels:
+    alertgroup: NodeStorageExceeded
+    severity: warning
+  annotations:
+    message: |
+      {{ $labels.node_role }} node {{ $labels.node }} disk usage more then 80%
+      Runtime Env = {{ $labels.runtime_env }}
+    summary: Node Storage Exceeded
+
+- alert: ContainerStorageExceeded
+  expr: container_fs_usage_bytes{id!="/",job="kubelet"} > 1.073741824e+10
+  for: 15m
+  labels:
+    alertgroup: ContainerStorageExceeded
+    severity: warning
+  annotations:
+    message: '{{ $labels.node_role }} {{ $labels.node }}: Container {{ $labels.name }} storage > 10G, image = {{ $labels.image }}, Account {{ $labels.container_label_io_codefresh_accountName }}, pipeline = {{ $labels.container_label_io_codefresh_pipelineName }}'
+    summary: Container Storage Warning

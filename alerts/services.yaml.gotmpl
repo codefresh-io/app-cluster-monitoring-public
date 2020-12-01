@@ -1,0 +1,8 @@
+- alert: CfApiMemoryHigh
+  expr: container_memory_rss{pod=~"{{ .Values.container_prefix }}cfapi-endpoints-base.*"} > 8589934592
+  labels:
+    alertgroup: dev
+    severity: critical
+  annotations:
+    message: cfapi-endpoints-base RAM usage is over 8G
+    summary: cfapi-endpoints-base leaks memory

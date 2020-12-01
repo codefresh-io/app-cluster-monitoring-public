@@ -1,0 +1,30 @@
+- alert: PrometheusMemoryWarning
+  expr: process_resident_memory_bytes{job="prom-prometheus-operator-prometheus",namespace="monitoring"} > 6300000000
+  for: 10m
+  labels:
+    alertgroup: MemoryLow
+    severity: warning
+  annotations:
+    message: 'prometheus: process_resident_memory_bytes = {{ $value }}'
+    summary: Prometheus memory warning
+
+- alert: ReminderCritical
+  expr: label_replace(ALERTS{alertname!="ReminderCritical",alertstate="firing",severity="critical"}, "alert", "$1", "alertname", "(.*)") == 1
+  for: 1h
+  labels:
+    alertgroup: reminder
+    severity: critical
+  annotations:
+    message: '{{ $labels.alert }} {{ if $labels.node }}node={{ $labels.node }} {{ end }}{{ if $labels.pod }}pod={{ $labels.pod }} {{ end }}{{ if $labels.namespace }}ns={{ $labels.namespace }} {{ end }}{{ if $labels.service_name }}svc={{ $labels.service_name }}{{ end }}'
+    summary: 'Reminder: there are critical alerts!'
+
+- alert: HpaMax
+  expr: kube_hpa_status_desired_replicas / kube_hpa_spec_max_replicas >= 0.8
+  labels:
+    alertgroup: autoscaler
+    severity: critical
+  annotations:
+    message: |
+      HPA pool {{ $labels.hpa }} is close to maximum capability
+      please consider enlarging the pool
+    summary: 'HPA pool {{ $labels.name }} hit the ceiling'

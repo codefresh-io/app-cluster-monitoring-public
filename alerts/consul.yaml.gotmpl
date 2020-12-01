@@ -1,0 +1,39 @@
+- alert: ConsulDown
+  expr: absent(consul_up == 1)
+  for: 3m
+  labels:
+    alertgroup: downtime
+    severity: critical
+  annotations:
+    message: consul cannot be reached from consul-exporter
+    summary: Consul is down
+
+- alert: ConsulContainerDown
+  expr: absent(count(container_fs_limit_bytes{container="{{ .Values.consul_prefix }}consul",namespace="{{ .Values.app_namespace }}"}) >= {{ .Values.consul_raft_peers }})
+  for: 10m
+  labels:
+    alertgroup: AppContainerIsDown
+    severity: critical
+  annotations:
+    message: 'consul: there are less than {{ .Values.consul_raft_peers }} containers running'
+    summary: Consul container is down
+
+- alert: ConsulExporterDown
+  expr: absent(count(container_fs_limit_bytes{container="prometheus-consul-exporter",namespace="{{ .Release.Namespace }}"}) >= 1)
+  for: 10m
+  labels:
+    alertgroup: AppContainerIsDown
+    severity: critical
+  annotations:
+    message: 'consul-exporter: no containers running'
+    summary: consul-exporter is down
+
+- alert: ConsulRaftPeersError
+  expr: absent(consul_raft_peers == {{ .Values.consul_raft_peers }})
+  for: 10m
+  labels:
+    alertgroup: downtime
+    severity: critical
+  annotations:
+    message: 'Consul Cluster failure: raft peers less than {{ .Values.consul_raft_peers }}'
+    summary: Consul Raft Peers error

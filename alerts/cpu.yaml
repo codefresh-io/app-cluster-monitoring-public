@@ -1,0 +1,21 @@
+# FIXME: no cpu_usage_recorded in my Prometheus
+
+- alert: ContainerCPU
+  expr: avg_over_time(cpu_usage_recorded{image!=""}[1m]) > 0.9
+  for: 15m
+  labels:
+    alertgroup: ContainerCPU
+    severity: warning
+  annotations:
+    message: '{{ $labels.node_role}} {{ $labels.node }}: Container {{ $labels.name }} CPU > 90% node {{ $labels.node}}, image = {{ $labels.image }}, account {{ $labels.container_label_io_codefresh_accountName }}, pipeline = {{ $labels.container_label_io_codefresh_pipelineName }}'
+    summary: ContainerCPU Warning
+
+- alert: NodeCPU
+  expr: avg_over_time(cpu_usage_recorded{id="/",image=""}[1m]) > 0.9
+  for: 1h
+  labels:
+    alertgroup: NodeCPU
+    severity: warning
+  annotations:
+    message: '{{ $labels.node_role }} node {{ $labels.node }} CPU > 90% Runtime Env = {{ $labels.runtime_env }}'
+    summary: Node CPU overloaded

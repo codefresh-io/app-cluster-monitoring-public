@@ -1,0 +1,19 @@
+- alert: NodeMemoryLow
+  expr: container_memory_usage_bytes{id="/",job="kubelet"} * 100 / ON(node, runtime_env) container_spec_memory_limit_bytes{id="/",job="kubelet"} > 75
+  for: 10m
+  labels:
+    alertgroup: MemoryLow
+    severity: warning
+  annotations:
+    message: |
+      {{ $labels.node_role }} node {{ $labels.node }} memory usage > 75%
+      Runtime Env = {{ $labels.runtime_env }}
+    summary: Node Memory Low
+
+- alert: ClockSkewDetected
+  expr: abs(node_timex_offset_seconds{job="node-exporter"}) > 0.03
+  for: 10m
+  labels:
+    severity: warning
+  annotations:
+    message: 'Clock skew detected on node-exporter {{ $labels.namespace }}/{{ $labels.pod }}. Ensure NTP is configured correctly on this host.'

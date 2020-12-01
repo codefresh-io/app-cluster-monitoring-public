@@ -1,0 +1,19 @@
+- alert: TooManyDockerNetworksWarning
+  expr: count(container_network_receive_bytes_total{id="/",interface=~"br-*"}) BY (node, runtime_env, instance) >= 25 unless ON(instance) ALERTS{alertname="TooManyDockerNetworksCritical",alertstate="firing"}
+  for: 5m
+  labels:
+    alertgroup: TooManyDockerNetworks
+    severity: warning
+  annotations:
+    message: 'There are {{ $value }} docker networks on {{ $labels.node_role }} node {{ $labels.node }}, RuntimeEnv = {{ $labels.runtime_env }}, agent {{ $labels.instance }} '
+    summary: Too many docker networks on {{ $labels.node }}
+
+- alert: TooManyDockerNetworksCritical
+  expr: count(container_network_receive_bytes_total{id="/",interface=~"br.*"}) BY (node, runtime_env, instance) >= 29
+  for: 3m
+  labels:
+    alertgroup: TooManyDockerNetworks
+    severity: critical
+  annotations:
+    message: 'There are {{ $value }} docker networks on {{ $labels.node_role }} node {{ $labels.node }}, RuntimeEnv = {{ $labels.runtime_env }}, agent {{ $labels.instance }} '
+    summary: Too many docker networks on {{ $labels.node }}
